@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { gsap, ScrollTrigger } from '@/lib/gsap'
+import { gsap } from '@/lib/gsap'
 
 const STATS = [
   { value: 3200, suffix: '+', label: 'Patients Treated'    },
@@ -37,12 +37,8 @@ function Counter({ target, suffix }) {
 }
 
 export default function HeroAurora() {
-  const heroRef     = useRef(null)   // outer tall section — scroll trigger anchor
-  const videoRef    = useRef(null)
-  const textRef     = useRef(null)
-  const recoveryRef = useRef(null)
-  const alignRef    = useRef(null)
-  const durationRef = useRef(0)      // set once loadedmetadata fires
+  const heroRef  = useRef(null)
+  const videoRef = useRef(null)
 
   /* ── Entrance animation ─────────────────────────────────────────────── */
   useEffect(() => {
@@ -61,150 +57,28 @@ export default function HeroAurora() {
     return () => ctx.revert()
   }, [])
 
-  /* ── Scroll scrub ───────────────────────────────────────────────────────
-   *
-   *  WHY NO pin:true
-   *  ───────────────
-   *  GSAP pin:true works by injecting a "pin spacer" that adds extra scroll
-   *  height AFTER Lenis has already measured the page.  Lenis therefore hits
-   *  its scroll limit before ScrollTrigger has a chance to progress, so the
-   *  animation never plays.
-   *
-   *  FIX: CSS `position:sticky` on the inner frame.  The outer heroRef
-   *  section is 200 vh tall — providing the scroll distance.  The inner
-   *  sticky div stays visually locked for the first 100 vh of that travel
-   *  (exactly one viewport length).  Lenis + ScrollTrigger both see the real
-   *  page height from the start, so no conflict.
-   *
-   *  SCROLL MATH
-   *  ───────────
-   *  Section height  = 200 vh
-   *  Sticky phase    = 200 vh − 100 vh (viewport) = 100 vh of scroll
-   *  trigger start   = 'top top'      (section top at viewport top)
-   *  trigger end     = 'bottom bottom' (section bottom at viewport bottom)
-   *                  ↳ fires after exactly 100 vh → matches sticky release
-   *
-   * ─────────────────────────────────────────────────────────────────────── */
+  /* ── Native scroll scrub — no GSAP ScrollTrigger, no Lenis dependency ── */
   useEffect(() => {
-    const video    = videoRef.current
-    const hero     = heroRef.current
-    const textEl   = textRef.current
-    const recovery = recoveryRef.current
-    const align    = alignRef.current
-    if (!video || !hero || !textEl || !recovery || !align) return
+    const video   = videoRef.current
+    const section = document.getElementById('hero')
+    if (!video || !section) return
 
-    let ctx     = null
-    let mounted = true
-
-    const initScrub = () => {
-      if (!mounted) return
-      const dur = video.duration
-      if (!dur || dur <= 0) return
-      durationRef.current = dur
-
-      ctx = gsap.context(() => {
-
-        // Proxy: GSAP animates a plain number 0→1, onUpdate forces the exact
-        // frame timestamp.  Direct video.currentTime tweens are unreliable —
-        // browsers seek to end on rapid scrolls; the proxy avoids that.
-        const scrollProxy = { val: 0 }
-
-        gsap.to(scrollProxy, {
-          val: 1,
-          ease: 'none',
-          onUpdate() {
-            const d = durationRef.current
-            if (d > 0) videoRef.current.currentTime = Math.min(scrollProxy.val * d, d - 0.05)
-          },
-          scrollTrigger: {
-            trigger: hero,
-            start: 'top top',
-            end: () => `+=${window.innerHeight}`,
-            scrub: 2.5,
-            invalidateOnRefresh: true,
-          },
-        })
-
-        // Text lifts + fades over the first ~60 % of sticky travel
-        gsap.to(textEl, {
-          y: -72,
-          opacity: 0,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: hero,
-            start: 'top top',
-            end: () => `+=${window.innerHeight * 0.6}`,
-            scrub: 1.2,
-            invalidateOnRefresh: true,
-          },
-        })
-
-        // Recovery badge drifts upper-left
-        gsap.to(recovery, {
-          x: -32, y: -26, rotation: -8,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: hero,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 2.2,
-            invalidateOnRefresh: true,
-          },
-        })
-
-        // Alignment badge drifts lower-right
-        gsap.to(align, {
-          x: 30, y: 34, rotation: 7,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: hero,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 2.2,
-            invalidateOnRefresh: true,
-          },
-        })
-
-      }, hero)
-
-      // Defer refresh 100 ms so the Lenis scroll bridge is guaranteed to be
-      // active before ScrollTrigger recalculates trigger positions.
-      setTimeout(() => { if (mounted) ScrollTrigger.refresh() }, 100)
+    const handleScroll = () => {
+      const { top, height } = section.getBoundingClientRect()
+      const progress = Math.min(Math.max(-top / (height - window.innerHeight), 0), 1)
+      video.currentTime = progress * video.duration
     }
 
-    // readyState >= 1 (HAVE_METADATA): duration is already known
-    if (video.readyState >= 1) {
-      initScrub()
-    } else {
-      video.addEventListener('loadedmetadata', initScrub, { once: true })
-    }
-
-    return () => {
-      mounted = false
-      video.removeEventListener('loadedmetadata', initScrub)
-      ctx?.revert()
-    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
-    /*
-     * Outer section — 200 vh gives the scroll runway.
-     * heroRef points here so all ScrollTriggers measure from the same origin.
-     */
     <section ref={heroRef} id="hero" className="relative w-full" style={{ height: '200vh' }}>
 
-      {/*
-       * Sticky frame — stays at the top of the viewport for the first 100 vh
-       * of scroll through the outer section.  overflow-hidden clips the
-       * upscaled video edges (watermark mask).
-       */}
+      {/* Sticky frame — locked at viewport top for the first 100 vh of scroll */}
       <div className="sticky top-0 w-full h-screen overflow-hidden">
 
-        {/* ── Scroll-scrubbed video ───────────────────────────────────────
-            scale-110 / md:scale-[1.15]: upscales symmetrically from center
-            so all edges including the bottom-right Veo watermark are pushed
-            outside the overflow-hidden clip.
-        ─────────────────────────────────────────────────────────────────── */}
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover
@@ -216,9 +90,7 @@ export default function HeroAurora() {
           aria-hidden="true"
         />
 
-        {/* ── Aurora gradient overlay ─────────────────────────────────────
-            Dark-left veil ensures white text stays readable across all frames.
-        ─────────────────────────────────────────────────────────────────── */}
+        {/* Aurora gradient overlay */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="absolute inset-0 bg-gradient-to-r from-[#060C1A]/[0.92] via-[#0A0F1E]/[0.62] to-transparent" />
           <div className="absolute -top-28 -left-28 w-[620px] h-[620px] rounded-full bg-aurora-teal/[0.28] blur-[110px]" />
@@ -227,14 +99,11 @@ export default function HeroAurora() {
           <div className="grid-overlay" />
         </div>
 
-        {/* ── Two-column content grid ─────────────────────────────────── */}
+        {/* Two-column content grid */}
         <div className="relative z-10 w-full h-full grid grid-cols-1 lg:grid-cols-2">
 
           {/* Left — typography, CTAs, stats */}
-          <div
-            ref={textRef}
-            className="flex flex-col justify-center px-8 md:px-14 lg:px-16 pt-24 pb-12 lg:pb-20"
-          >
+          <div className="flex flex-col justify-center px-8 md:px-14 lg:px-16 pt-24 pb-12 lg:pb-20">
             <div className="h-eyebrow eyebrow mb-6 self-start">
               Mesa, AZ · Pain Management Specialists
             </div>
@@ -297,13 +166,10 @@ export default function HeroAurora() {
           {/* Right — clear focal window + floating glassmorphic badges */}
           <div className="relative hidden lg:block">
 
-            {/* Recovery +47% */}
-            <div
-              ref={recoveryRef}
-              className="h-badge absolute top-[27%] left-[10%] z-20
-                backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
-                shadow-[0_8px_40px_rgba(0,212,170,0.20),0_2px_12px_rgba(0,0,0,0.40)]
-                rounded-2xl px-5 py-4 min-w-[152px]"
+            <div className="h-badge absolute top-[27%] left-[10%] z-20
+              backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
+              shadow-[0_8px_40px_rgba(0,212,170,0.20),0_2px_12px_rgba(0,0,0,0.40)]
+              rounded-2xl px-5 py-4 min-w-[152px]"
             >
               <p className="font-mono text-[9px] text-white/55 uppercase tracking-[0.15em] mb-1.5">
                 Recovery
@@ -317,13 +183,10 @@ export default function HeroAurora() {
               </div>
             </div>
 
-            {/* Alignment 98.2% */}
-            <div
-              ref={alignRef}
-              className="h-badge absolute bottom-[30%] right-[8%] z-20
-                backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
-                shadow-[0_8px_40px_rgba(129,140,248,0.20),0_2px_12px_rgba(0,0,0,0.40)]
-                rounded-2xl px-5 py-4 min-w-[158px]"
+            <div className="h-badge absolute bottom-[30%] right-[8%] z-20
+              backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
+              shadow-[0_8px_40px_rgba(129,140,248,0.20),0_2px_12px_rgba(0,0,0,0.40)]
+              rounded-2xl px-5 py-4 min-w-[158px]"
             >
               <p className="font-mono text-[9px] text-white/55 uppercase tracking-[0.15em] mb-1.5">
                 Alignment
@@ -340,7 +203,7 @@ export default function HeroAurora() {
           </div>
         </div>
 
-        {/* ── Scroll cue ── */}
+        {/* Scroll cue */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-40">
           <span className="font-mono text-[9px] text-white/60 tracking-widest uppercase">Scroll</span>
           <div className="w-px h-8 bg-gradient-to-b from-aurora-teal/70 to-transparent animate-float" />
