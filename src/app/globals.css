@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: auto; /* Lenis handles smooth scroll */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #F8FAFC;
+  color: #0F172A;
+  font-family: var(--font-body), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ─── Aurora blobs ─── */
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+  pointer-events: none;
+}
+.blob-teal   { background: radial-gradient(circle, rgba(0,212,170,0.55) 0%, transparent 70%); }
+.blob-purple { background: radial-gradient(circle, rgba(129,140,248,0.45) 0%, transparent 70%); }
+.blob-pink   { background: radial-gradient(circle, rgba(244,114,182,0.35) 0%, transparent 70%); }
+.blob-cyan   { background: radial-gradient(circle, rgba(103,232,249,0.45) 0%, transparent 70%); }
+.blob-emerald{ background: radial-gradient(circle, rgba(52,211,153,0.4)  0%, transparent 70%); }
+
+/* ─── Glass card ─── */
+.glass-card {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 8px 32px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.85);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.glass-card:hover {
+  box-shadow: 0 20px 60px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+  transform: translateY(-4px);
+}
+
+/* ─── Gradient text ─── */
+.gradient-text {
+  background: linear-gradient(135deg, #00D4AA 0%, #06B6D4 40%, #818CF8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-text-teal {
+  background: linear-gradient(90deg, #00D4AA 0%, #06B6D4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── CTA button glow ─── */
+.btn-aurora {
+  background: linear-gradient(135deg, #00D4AA, #06B6D4);
+  color: #fff;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  transition: box-shadow 0.25s ease, transform 0.2s ease, filter 0.2s ease;
+  will-change: transform;
+}
+.btn-aurora:hover {
+  box-shadow: 0 0 40px rgba(0,212,170,0.5), 0 8px 24px rgba(0,212,170,0.3);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+.btn-ghost {
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(15,23,42,0.12);
+  color: #0F172A;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,212,170,0.4);
+  transform: translateY(-2px);
+}
+
+/* ─── Section rhythm ─── */
+.section-pad { padding-top: 100px; padding-bottom: 100px; }
+@media (max-width: 768px) { .section-pad { padding-top: 64px; padding-bottom: 64px; } }
+
+/* ─── Eyebrow label ─── */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #00D4AA;
+  background: rgba(0,212,170,0.08);
+  border: 1px solid rgba(0,212,170,0.2);
+  padding: 6px 14px;
+  border-radius: 100px;
+}
+.eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00D4AA;
+  box-shadow: 0 0 8px rgba(0,212,170,0.8);
+  animation: dataPulse 2s ease-in-out infinite;
+}
+
+/* ─── Nav glass ─── */
+.nav-glass {
+  background: rgba(248,250,252,0.85);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 1px 24px rgba(15,23,42,0.05);
+}
+.nav-transparent {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+/* ─── Orb 3D ─── */
+.orb-scene {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+/* ─── Treatment tab panel ─── */
+.tab-panel { will-change: opacity, transform; }
+
+/* ─── Number metric mono ─── */
+.metric-value {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Fine grid overlay (hero) ─── */
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image:
+    linear-gradient(rgba(0,212,170,1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,170,1) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ─── Shimmer effect ─── */
+.shimmer-text {
+  background: linear-gradient(90deg, #0F172A 0%, #00D4AA 50%, #0F172A 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+/* ─── Journey step card accent ─── */
+.step-accent-teal    { border-top: 2px solid #00D4AA; }
+.step-accent-cyan    { border-top: 2px solid #06B6D4; }
+.step-accent-purple  { border-top: 2px solid #818CF8; }
+.step-accent-pink    { border-top: 2px solid #F472B6; }
+.step-accent-emerald { border-top: 2px solid #34D399; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: rgba(0,212,170,0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,170,0.7); }
+
+/* ─── Focus ring ─── */
+:focus-visible { outline: 2px solid #00D4AA; outline-offset: 3px; }
+
+/* ─── Motion preferences ─── */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob, .animate-float, .animate-aurora-1,
+  .animate-aurora-2, .animate-aurora-3, .animate-aurora-4 { animation: none !important; }
+}
