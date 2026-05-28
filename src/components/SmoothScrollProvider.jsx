@@ -1,32 +1,41 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { gsap, ScrollTrigger } from '@/lib/gsap'
 
 export default function SmoothScrollProvider({ children }) {
-  useEffect(() => {
-    let lenis
-    let rafId
+  const lenisRef   = useRef(null)
+  const tickerFnRef = useRef(null)
 
-    async function init() {
-      const { default: Lenis } = await import('lenis')
-      lenis = new Lenis({
+  useEffect(() => {
+    let mounted = true
+
+    import('lenis').then(({ default: Lenis }) => {
+      if (!mounted) return
+
+      const lenis = new Lenis({
         duration: 1.3,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
         wheelMultiplier: 0.9,
       })
+      lenisRef.current = lenis
 
-      function raf(time) {
-        lenis.raf(time)
-        rafId = requestAnimationFrame(raf)
-      }
-      rafId = requestAnimationFrame(raf)
-    }
+      // Critical: tell ScrollTrigger when Lenis scrolls
+      lenis.on('scroll', ScrollTrigger.update)
 
-    init()
+      // Drive Lenis from GSAP's ticker (keeps both in sync)
+      const fn = (time) => lenis.raf(time * 1000)
+      tickerFnRef.current = fn
+      gsap.ticker.add(fn)
+      gsap.ticker.lagSmoothing(0)
+
+      ScrollTrigger.refresh()
+    })
 
     return () => {
-      cancelAnimationFrame(rafId)
-      lenis?.destroy()
+      mounted = false
+      if (tickerFnRef.current) gsap.ticker.remove(tickerFnRef.current)
+      lenisRef.current?.destroy()
     }
   }, [])
 

@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { gsap } from '@/lib/gsap'
 
 const NAV_LINKS = [
-  { label: 'About',      href: '#value' },
-  { label: 'Treatments', href: '#treatments' },
-  { label: 'Care Plans', href: '#careplans' },
-  { label: 'Your Journey', href: '#journey' },
-  { label: 'Locations',  href: '#footer' },
+  { label: 'Services',   href: '#services' },
+  { label: 'Conditions', href: '#problem' },
+  { label: 'Locations',  href: '#locations' },
+  { label: 'About',      href: '#footer' },
 ]
 
 export default function SiteNav() {
@@ -17,15 +17,8 @@ export default function SiteNav() {
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
     window.addEventListener('scroll', onScroll, { passive: true })
+    gsap.from(navRef.current, { y: -20, opacity: 0, duration: 0.7, ease: 'power3.out', delay: 0.1 })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
-    async function animateIn() {
-      const { gsap } = await import('gsap')
-      gsap.from(navRef.current, { y: -20, opacity: 0, duration: 0.7, ease: 'power3.out', delay: 0.1 })
-    }
-    animateIn()
   }, [])
 
   const scrollTo = (href) => {
@@ -35,30 +28,26 @@ export default function SiteNav() {
   }
 
   return (
-    <header
-      ref={navRef}
+    <header ref={navRef}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled ? 'nav-glass' : 'nav-transparent'
-      }`}
-    >
+      }`}>
       <div className="max-w-7xl mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
 
-        {/* Logo */}
-        <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-          className="flex items-center gap-3 group">
+        <a href="#" onClick={e => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+          className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg btn-aurora flex items-center justify-center flex-shrink-0 shadow-teal-sm">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M9 2 L9 16 M5 5.5 L9 2 L13 5.5 M5 12.5 L9 16 L13 12.5 M6 8.5 L12 8.5 M6 9.5 L12 9.5"
+              <path d="M9 2L9 16M5 5.5L9 2L13 5.5M5 12.5L9 16L13 12.5M6 8.5L12 8.5M6 9.5L12 9.5"
                 stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <div className="leading-none">
             <div className="font-display font-700 text-sm text-ink tracking-tight">City Health</div>
-            <div className="font-mono text-[10px] text-ink-3 tracking-widest uppercase">Chiropractic</div>
+            <div className="font-mono text-[10px] text-ink-3 tracking-widest uppercase">Services</div>
           </div>
         </a>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
           {NAV_LINKS.map(({ label, href }) => (
             <button key={label} onClick={() => scrollTo(href)}
@@ -69,7 +58,6 @@ export default function SiteNav() {
           ))}
         </nav>
 
-        {/* CTA + mobile toggle */}
         <div className="flex items-center gap-3">
           <a href="tel:4809005520"
             className="hidden md:flex items-center gap-2 font-mono text-xs text-ink-3 hover:text-aurora-teal transition-colors">
@@ -80,7 +68,7 @@ export default function SiteNav() {
           </a>
           <button onClick={() => scrollTo('#footer')}
             className="btn-aurora px-5 py-2.5 rounded-xl text-sm font-display font-600 shadow-teal-sm">
-            Book Free Consult
+            Request Appointment
           </button>
           <button onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden w-9 h-9 flex flex-col justify-center items-center gap-1.5 rounded-lg hover:bg-black/5 transition-colors">
@@ -91,7 +79,6 @@ export default function SiteNav() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       <div className={`md:hidden transition-all duration-300 overflow-hidden ${menuOpen ? 'max-h-80' : 'max-h-0'}`}>
         <div className="nav-glass border-t border-white/30 px-6 py-4 flex flex-col gap-1">
           {NAV_LINKS.map(({ label, href }) => (

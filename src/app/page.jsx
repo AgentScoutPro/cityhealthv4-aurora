@@ -1,10 +1,9 @@
 import SmoothScrollProvider from '@/components/SmoothScrollProvider'
 import SiteNav          from '@/components/SiteNav'
 import HeroAurora       from '@/components/HeroAurora'
-import ValueGrid        from '@/components/ValueGrid'
-import TreatmentHub     from '@/components/TreatmentHub'
-import CarePlanSelector from '@/components/CarePlanSelector'
-import PatientJourney   from '@/components/PatientJourney'
+import CoreProblemSplit from '@/components/CoreProblemSplit'
+import ServiceBento     from '@/components/ServiceBento'
+import LocationsHub     from '@/components/LocationsHub'
 import FooterCTA        from '@/components/FooterCTA'
 
 export default function HomePage() {
@@ -13,10 +12,9 @@ export default function HomePage() {
       <SiteNav />
       <main>
         <HeroAurora />
-        <ValueGrid />
-        <TreatmentHub />
-        <CarePlanSelector />
-        <PatientJourney />
+        <CoreProblemSplit />
+        <ServiceBento />
+        <LocationsHub />
       </main>
       <FooterCTA />
     </SmoothScrollProvider>
