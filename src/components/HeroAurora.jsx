@@ -37,12 +37,14 @@ function Counter({ target, suffix }) {
 
 export default function HeroAurora() {
   const heroRef     = useRef(null)
+  const videoRef    = useRef(null)
   const textRef     = useRef(null)
   const recoveryRef = useRef(null)
   const alignRef    = useRef(null)
 
   /* ── Scroll animation — rAF loop reads position every frame ─────────── */
   useEffect(() => {
+    const video    = videoRef.current
     const section  = heroRef.current
     const text     = textRef.current
     const recovery = recoveryRef.current
@@ -58,6 +60,11 @@ export default function HeroAurora() {
 
       if (scrollable > 0) {
         const progress = Math.min(Math.max(scrolled / scrollable, 0), 1)
+
+        // Video scrub
+        if (video && video.readyState >= 1) {
+          video.currentTime = progress * video.duration
+        }
 
         // Text fades out over first 60 % of scroll travel
         if (text) {
@@ -90,14 +97,15 @@ export default function HeroAurora() {
       {/* Sticky frame — locked at viewport top for the first 100 vh of scroll */}
       <div className="sticky top-0 w-full h-screen overflow-hidden">
 
-        {/* GIF auto-plays and loops natively — no video scrub needed */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/videos/A_cinematic_seamless_5second_illustration_a.gif"
-          alt=""
-          aria-hidden="true"
+        <video
+          ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover
-            scale-110 md:scale-[1.15] origin-center"
+            scale-110 md:scale-[1.15] origin-center will-change-transform"
+          src="/videos/video-hero-short-v2.mp4"
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden="true"
         />
 
         {/* Aurora gradient overlay */}
