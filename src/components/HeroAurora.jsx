@@ -113,9 +113,8 @@ export default function HeroAurora() {
           val: 1,
           ease: 'none',
           onUpdate() {
-            if (videoRef.current) {
-              videoRef.current.currentTime = scrollProxy.val * durationRef.current
-            }
+            const d = durationRef.current
+            if (d > 0) videoRef.current.currentTime = Math.min(scrollProxy.val * d, d - 0.05)
           },
           scrollTrigger: {
             trigger: hero,
