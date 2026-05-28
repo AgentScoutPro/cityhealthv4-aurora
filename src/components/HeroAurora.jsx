@@ -43,7 +43,7 @@ export default function HeroAurora() {
   const recoveryRef = useRef(null)
   const alignRef    = useRef(null)
 
-  /* ── Entrance animation ── */
+  /* ── Entrance animation (runs once on mount, no scroll dependency) ── */
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.timeline({ delay: 0.3 })
@@ -53,83 +53,110 @@ export default function HeroAurora() {
         .from('.h-ctas',     { y: 20, opacity: 0, duration: 0.50, ease: 'power3.out' }, '-=0.35')
         .from('.h-stats',    { y: 18, opacity: 0, duration: 0.50, ease: 'power3.out' }, '-=0.30')
         .from('.h-badge',    {
-          scale: 0.82,
-          opacity: 0,
-          duration: 0.65,
-          ease: 'back.out(1.5)',
-          stagger: 0.18,
+          scale: 0.82, opacity: 0, duration: 0.65,
+          ease: 'back.out(1.5)', stagger: 0.18,
         }, '-=0.55')
     }, heroRef)
     return () => ctx.revert()
   }, [])
 
-  /* ── Scroll-driven parallax — wired into the Lenis/GSAP ticker ── */
+  /* ── Scroll-scrub setup — waits for video metadata before wiring GSAP ── */
   useEffect(() => {
-    const hero     = heroRef.current
     const video    = videoRef.current
+    const hero     = heroRef.current
     const textEl   = textRef.current
     const recovery = recoveryRef.current
     const align    = alignRef.current
-    if (!hero || !video || !textEl || !recovery || !align) return
+    if (!video || !hero || !textEl || !recovery || !align) return
 
-    const ctx = gsap.context(() => {
+    let ctx     = null
+    let mounted = true
 
-      // Video zooms subtly as the section scrolls out
-      gsap.to(video, {
-        scale: 1.12,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: hero,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: 1.8,
-        },
-      })
+    const initScrub = () => {
+      if (!mounted) return
 
-      // Recovery badge drifts upper-left on an orbital arc
-      gsap.to(recovery, {
-        x: -32,
-        y: -26,
-        rotation: -8,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: hero,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: 2.2,
-        },
-      })
+      ctx = gsap.context(() => {
 
-      // Alignment badge drifts lower-right
-      gsap.to(align, {
-        x: 30,
-        y: 34,
-        rotation: 7,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: hero,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: 2.2,
-        },
-      })
+        /*
+         * Primary: pin the hero and scrub video.currentTime through the
+         * scroll distance.  `end: "bottom top"` with h-screen gives exactly
+         * 100 vh of pin travel — the video plays start-to-finish in that window.
+         */
+        gsap.to(video, {
+          currentTime: video.duration,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 1,
+            pin: true,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+          },
+        })
 
-      // Left text lifts and fades as hero exits viewport
-      gsap.to(textEl, {
-        y: -72,
-        opacity: 0,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: hero,
-          start: 'top top',
-          end: '55% top',
-          scrub: 1.2,
-        },
-      })
+        /*
+         * Left text: lifts and fades out over the first 55 % of pin travel
+         * so the video has full visual focus for its second half.
+         */
+        gsap.to(textEl, {
+          y: -72,
+          opacity: 0,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: '55% top',
+            scrub: 1.2,
+            invalidateOnRefresh: true,
+          },
+        })
 
-    }, hero)
+        // Recovery badge — drifts upper-left
+        gsap.to(recovery, {
+          x: -32, y: -26, rotation: -8,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 2.2,
+            invalidateOnRefresh: true,
+          },
+        })
 
-    return () => ctx.revert()
+        // Alignment badge — drifts lower-right
+        gsap.to(align, {
+          x: 30, y: 34, rotation: 7,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 2.2,
+            invalidateOnRefresh: true,
+          },
+        })
+
+      }, hero)
+
+      // Recalculate all ScrollTrigger positions after the pin spacer is injected
+      ScrollTrigger.refresh()
+    }
+
+    // readyState >= 1 means HAVE_METADATA — duration is already known (cached)
+    if (video.readyState >= 1) {
+      initScrub()
+    } else {
+      video.addEventListener('loadedmetadata', initScrub, { once: true })
+    }
+
+    return () => {
+      mounted = false
+      video.removeEventListener('loadedmetadata', initScrub)
+      ctx?.revert()
+    }
   }, [])
 
   return (
@@ -139,44 +166,44 @@ export default function HeroAurora() {
       className="relative w-full h-screen overflow-hidden"
     >
 
-      {/* ─────────────────────────────────────────
-          Full-bleed background video
-      ───────────────────────────────────────── */}
+      {/* ── Scroll-scrubbed background video ──────────────────────────────
+          • autoPlay / loop removed — playback is 100 % scroll-driven
+          • scale-110: upscales ~10 % so the Veo bottom-right watermark
+            is pushed outside the overflow-hidden clip boundary
+          • preload="metadata": fetches duration immediately without
+            buffering the full file, enabling fast initScrub()
+      ──────────────────────────────────────────────────────────────────── */}
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover will-change-transform"
+        className="absolute inset-0 w-full h-full object-cover scale-110 will-change-transform"
         src="/videos/A01B-CITYHEALTH-HERO.mp4"
-        autoPlay
-        loop
         muted
         playsInline
+        preload="metadata"
         aria-hidden="true"
       />
 
-      {/* ─────────────────────────────────────────
-          Aurora gradient overlay
-          – Dark veil left → keeps copy readable
-          – Teal / pink / lavender blooms for depth
-      ───────────────────────────────────────── */}
+      {/* ── Aurora gradient overlay ────────────────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        {/* Dark-left veil keeps the copy column readable across all video frames */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#060C1A]/[0.92] via-[#0A0F1E]/[0.62] to-transparent" />
+        {/* Teal bloom — top-left */}
         <div className="absolute -top-28 -left-28 w-[620px] h-[620px] rounded-full bg-aurora-teal/[0.28] blur-[110px]" />
+        {/* Pink bloom — lower-centre */}
         <div className="absolute bottom-0 left-[18%] w-[480px] h-[360px] rounded-full bg-aurora-pink/[0.18] blur-[120px]" />
+        {/* Lavender bloom — right edge */}
         <div className="absolute top-[12%] right-0 w-[440px] h-[540px] rounded-full bg-aurora-purple/[0.20] blur-[100px]" />
         <div className="grid-overlay" />
       </div>
 
-      {/* ─────────────────────────────────────────
-          Two-column content grid
-      ───────────────────────────────────────── */}
+      {/* ── Two-column content grid ────────────────────────────────────── */}
       <div className="relative z-10 w-full h-full grid grid-cols-1 lg:grid-cols-2">
 
-        {/* ── Left column: typography & CTAs ── */}
+        {/* Left — typography, CTAs, stats */}
         <div
           ref={textRef}
           className="flex flex-col justify-center px-8 md:px-14 lg:px-16 pt-24 pb-12 lg:pb-20"
         >
-
           <div className="h-eyebrow eyebrow mb-6 self-start">
             Mesa, AZ · Pain Management Specialists
           </div>
@@ -234,28 +261,24 @@ export default function HeroAurora() {
               </div>
             ))}
           </div>
-
         </div>
 
-        {/* ── Right column: video focal area + floating badges ── */}
+        {/* Right — clear focal window + floating glassmorphic badges */}
         <div className="relative hidden lg:block">
 
           {/* Recovery +47% */}
           <div
             ref={recoveryRef}
             className="h-badge absolute top-[27%] left-[10%] z-20
-              backdrop-blur-[16px]
-              bg-white/[0.08] border border-white/[0.18]
+              backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
               shadow-[0_8px_40px_rgba(0,212,170,0.20),0_2px_12px_rgba(0,0,0,0.40)]
               rounded-2xl px-5 py-4 min-w-[152px]"
           >
             <p className="font-mono text-[9px] text-white/55 uppercase tracking-[0.15em] mb-1.5">
               Recovery
             </p>
-            <p
-              className="font-display font-bold text-white leading-none tracking-tight mb-2.5"
-              style={{ fontSize: '1.45rem' }}
-            >
+            <p className="font-display font-bold text-white leading-none tracking-tight mb-2.5"
+              style={{ fontSize: '1.45rem' }}>
               +47%
             </p>
             <div className="h-[3px] w-full rounded-full bg-white/10 overflow-hidden">
@@ -267,18 +290,15 @@ export default function HeroAurora() {
           <div
             ref={alignRef}
             className="h-badge absolute bottom-[30%] right-[8%] z-20
-              backdrop-blur-[16px]
-              bg-white/[0.08] border border-white/[0.18]
+              backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
               shadow-[0_8px_40px_rgba(129,140,248,0.20),0_2px_12px_rgba(0,0,0,0.40)]
               rounded-2xl px-5 py-4 min-w-[158px]"
           >
             <p className="font-mono text-[9px] text-white/55 uppercase tracking-[0.15em] mb-1.5">
               Alignment
             </p>
-            <p
-              className="font-display font-bold text-white leading-none tracking-tight mb-2.5"
-              style={{ fontSize: '1.45rem' }}
-            >
+            <p className="font-display font-bold text-white leading-none tracking-tight mb-2.5"
+              style={{ fontSize: '1.45rem' }}>
               98.2%
             </p>
             <div className="h-[3px] w-full rounded-full bg-white/10 overflow-hidden">
@@ -287,7 +307,6 @@ export default function HeroAurora() {
           </div>
 
         </div>
-
       </div>
 
       {/* ── Scroll cue ── */}
