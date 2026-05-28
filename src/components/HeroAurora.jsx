@@ -37,24 +37,17 @@ function Counter({ target, suffix }) {
 
 export default function HeroAurora() {
   const heroRef     = useRef(null)
-  const videoRef    = useRef(null)
   const textRef     = useRef(null)
   const recoveryRef = useRef(null)
   const alignRef    = useRef(null)
 
-  /* ── Scroll animation — rAF loop reads position every frame ───────────
-   *  Using requestAnimationFrame instead of window 'scroll' events because
-   *  Lenis smooth-scrolls via window.scrollTo() and event timing can be
-   *  inconsistent.  rAF always reads the real painted position, so video
-   *  scrub, text fade, and badge drift stay perfectly in sync.
-   * ─────────────────────────────────────────────────────────────────────── */
+  /* ── Scroll animation — rAF loop reads position every frame ─────────── */
   useEffect(() => {
-    const video    = videoRef.current
     const section  = heroRef.current
     const text     = textRef.current
     const recovery = recoveryRef.current
     const align    = alignRef.current
-    if (!video || !section) return
+    if (!section) return
 
     let rafId
 
@@ -65,11 +58,6 @@ export default function HeroAurora() {
 
       if (scrollable > 0) {
         const progress = Math.min(Math.max(scrolled / scrollable, 0), 1)
-
-        // Video scrub
-        if (video.readyState >= 1) {
-          video.currentTime = progress * video.duration
-        }
 
         // Text fades out over first 60 % of scroll travel
         if (text) {
@@ -102,15 +90,14 @@ export default function HeroAurora() {
       {/* Sticky frame — locked at viewport top for the first 100 vh of scroll */}
       <div className="sticky top-0 w-full h-screen overflow-hidden">
 
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover
-            scale-110 md:scale-[1.15] origin-center will-change-transform"
-          src="/videos/city_health_hero_window_video_202605272131.mp4"
-          muted
-          playsInline
-          preload="auto"
+        {/* GIF auto-plays and loops natively — no video scrub needed */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/videos/A_cinematic_seamless_5second_illustration_a.gif"
+          alt=""
           aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover
+            scale-110 md:scale-[1.15] origin-center"
         />
 
         {/* Aurora gradient overlay */}
