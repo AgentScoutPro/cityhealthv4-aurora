@@ -37,13 +37,16 @@ function Counter({ target, suffix }) {
 }
 
 export default function HeroAurora() {
-  const heroRef     = useRef(null)
-  const videoRef    = useRef(null)
-  const textRef     = useRef(null)
-  const recoveryRef = useRef(null)
-  const alignRef    = useRef(null)
+  const heroRef      = useRef(null)
+  const videoRef     = useRef(null)
+  const textRef      = useRef(null)
+  const recoveryRef  = useRef(null)
+  const alignRef     = useRef(null)
+  // Stores the confirmed duration so the GSAP onUpdate always has an
+  // accurate value — never reads video.duration before metadata is ready.
+  const durationRef  = useRef(0)
 
-  /* ── Entrance animation (runs once on mount, no scroll dependency) ── */
+  /* ── Entrance animation ──────────────────────────────────────────────── */
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.timeline({ delay: 0.3 })
@@ -60,7 +63,7 @@ export default function HeroAurora() {
     return () => ctx.revert()
   }, [])
 
-  /* ── Scroll-scrub setup — waits for video metadata before wiring GSAP ── */
+  /* ── Scroll-scrub + pin ──────────────────────────────────────────────── */
   useEffect(() => {
     const video    = videoRef.current
     const hero     = heroRef.current
@@ -75,16 +78,29 @@ export default function HeroAurora() {
     const initScrub = () => {
       if (!mounted) return
 
+      const videoDuration = video.duration
+      if (!videoDuration || videoDuration <= 0) return
+      durationRef.current = videoDuration
+
       ctx = gsap.context(() => {
 
         /*
-         * Primary: pin the hero and scrub video.currentTime through the
-         * scroll distance.  `end: "bottom top"` with h-screen gives exactly
-         * 100 vh of pin travel — the video plays start-to-finish in that window.
+         * PROXY SCRUB — animates a plain JS number 0→1 and manually assigns
+         * video.currentTime on every tick.  This is more reliable than
+         * gsap.to(video, { currentTime }) because browsers can drop frames or
+         * seek to the end on rapid scrolls when the DOM property is tweened
+         * directly.  The proxy avoids that entirely.
          */
-        gsap.to(video, {
-          currentTime: video.duration,
+        const scrollProxy = { val: 0 }
+
+        gsap.to(scrollProxy, {
+          val: 1,
           ease: 'none',
+          onUpdate() {
+            if (videoRef.current) {
+              videoRef.current.currentTime = scrollProxy.val * durationRef.current
+            }
+          },
           scrollTrigger: {
             trigger: hero,
             start: 'top top',
@@ -96,10 +112,7 @@ export default function HeroAurora() {
           },
         })
 
-        /*
-         * Left text: lifts and fades out over the first 55 % of pin travel
-         * so the video has full visual focus for its second half.
-         */
+        // Left text: lifts + fades over the first 55 % of pin travel
         gsap.to(textEl, {
           y: -72,
           opacity: 0,
@@ -141,11 +154,11 @@ export default function HeroAurora() {
 
       }, hero)
 
-      // Recalculate all ScrollTrigger positions after the pin spacer is injected
+      // Re-calculate all ScrollTrigger offsets after the pin spacer is injected
       ScrollTrigger.refresh()
     }
 
-    // readyState >= 1 means HAVE_METADATA — duration is already known (cached)
+    // readyState >= 1 (HAVE_METADATA): duration already known, skip the listener
     if (video.readyState >= 1) {
       initScrub()
     } else {
@@ -166,37 +179,38 @@ export default function HeroAurora() {
       className="relative w-full h-screen overflow-hidden"
     >
 
-      {/* ── Scroll-scrubbed background video ──────────────────────────────
-          • autoPlay / loop removed — playback is 100 % scroll-driven
-          • scale-110: upscales ~10 % so the Veo bottom-right watermark
-            is pushed outside the overflow-hidden clip boundary
-          • preload="metadata": fetches duration immediately without
-            buffering the full file, enabling fast initScrub()
+      {/* ── Scroll-scrubbed background video ─────────────────────────────
+          preload="auto"   → browser buffers enough for smooth seek
+          muted playsInline → required for autoplay/seek on mobile
+          scale-110 / md:scale-[1.15] with origin-center → upscales the
+            frame symmetrically so all four edges (incl. bottom-right where
+            the Veo watermark sits) are pushed outside the overflow-hidden
+            clip boundary; 10 % at mobile, 15 % at ≥ 768 px
       ──────────────────────────────────────────────────────────────────── */}
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover scale-110 will-change-transform"
-        src="/videos/A01B-CITYHEALTH-HERO.mp4"
+        className="absolute inset-0 w-full h-full object-cover
+          scale-110 md:scale-[1.15] origin-center will-change-transform"
+        src="/videos/city_health_hero_window_video_202605272131.mp4"
         muted
         playsInline
-        preload="metadata"
+        preload="auto"
         aria-hidden="true"
       />
 
-      {/* ── Aurora gradient overlay ────────────────────────────────────── */}
+      {/* ── Aurora gradient overlay ───────────────────────────────────────
+          Dark-left veil keeps white typography readable across all frames.
+          Teal / pink / lavender blooms layer atmosphere over the video.
+      ──────────────────────────────────────────────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        {/* Dark-left veil keeps the copy column readable across all video frames */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#060C1A]/[0.92] via-[#0A0F1E]/[0.62] to-transparent" />
-        {/* Teal bloom — top-left */}
         <div className="absolute -top-28 -left-28 w-[620px] h-[620px] rounded-full bg-aurora-teal/[0.28] blur-[110px]" />
-        {/* Pink bloom — lower-centre */}
         <div className="absolute bottom-0 left-[18%] w-[480px] h-[360px] rounded-full bg-aurora-pink/[0.18] blur-[120px]" />
-        {/* Lavender bloom — right edge */}
         <div className="absolute top-[12%] right-0 w-[440px] h-[540px] rounded-full bg-aurora-purple/[0.20] blur-[100px]" />
         <div className="grid-overlay" />
       </div>
 
-      {/* ── Two-column content grid ────────────────────────────────────── */}
+      {/* ── Two-column content grid ───────────────────────────────────── */}
       <div className="relative z-10 w-full h-full grid grid-cols-1 lg:grid-cols-2">
 
         {/* Left — typography, CTAs, stats */}
