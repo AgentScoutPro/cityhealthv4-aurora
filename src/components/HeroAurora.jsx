@@ -120,7 +120,7 @@ export default function HeroAurora() {
           scrollTrigger: {
             trigger: hero,
             start: 'top top',
-            end: '+=100vh',
+            end: () => `+=${window.innerHeight}`,
             scrub: 1,
             invalidateOnRefresh: true,
           },
@@ -134,7 +134,7 @@ export default function HeroAurora() {
           scrollTrigger: {
             trigger: hero,
             start: 'top top',
-            end: '+=60vh',
+            end: () => `+=${window.innerHeight * 0.6}`,
             scrub: 1.2,
             invalidateOnRefresh: true,
           },
