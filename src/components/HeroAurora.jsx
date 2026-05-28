@@ -120,7 +120,7 @@ export default function HeroAurora() {
             trigger: hero,
             start: 'top top',
             end: () => `+=${window.innerHeight}`,
-            scrub: 1,
+            scrub: 2.5,
             invalidateOnRefresh: true,
           },
         })
