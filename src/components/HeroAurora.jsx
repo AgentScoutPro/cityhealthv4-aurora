@@ -120,7 +120,7 @@ export default function HeroAurora() {
           scrollTrigger: {
             trigger: hero,
             start: 'top top',
-            end: 'bottom bottom',
+            end: '+=100vh',
             scrub: 1,
             invalidateOnRefresh: true,
           },
@@ -134,7 +134,7 @@ export default function HeroAurora() {
           scrollTrigger: {
             trigger: hero,
             start: 'top top',
-            end: 'top+=60vh',
+            end: '+=60vh',
             scrub: 1.2,
             invalidateOnRefresh: true,
           },
@@ -168,7 +168,9 @@ export default function HeroAurora() {
 
       }, hero)
 
-      ScrollTrigger.refresh()
+      // Defer refresh 100 ms so the Lenis scroll bridge is guaranteed to be
+      // active before ScrollTrigger recalculates trigger positions.
+      setTimeout(() => { if (mounted) ScrollTrigger.refresh() }, 100)
     }
 
     // readyState >= 1 (HAVE_METADATA): duration is already known

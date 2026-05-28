@@ -9,13 +9,15 @@ html {
   scroll-behavior: auto; /* Lenis handles smooth scroll */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* overflow-x on html (not body) — body overflow breaks position:sticky
+     in Firefox/Safari by creating a new scroll container. */
+  overflow-x: hidden;
 }
 
 body {
   background: #F8FAFC;
   color: #0F172A;
   font-family: var(--font-body), system-ui, sans-serif;
-  overflow-x: hidden;
 }
 
 /* ─── Aurora blobs ─── */
