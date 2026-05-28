@@ -104,7 +104,7 @@ export default function HeroAurora() {
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover
             scale-110 md:scale-[1.15] origin-center will-change-transform"
-          src="/videos/city_health_hero_window_video_202605272131.mp4"
+          src="/videos/Man's_silhouette_scales_out_window_202605272133.mp4"
           muted
           playsInline
           preload="auto"
