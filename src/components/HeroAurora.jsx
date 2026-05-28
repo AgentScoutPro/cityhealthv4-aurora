@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { gsap } from '@/lib/gsap'
 
 const STATS = [
   { value: 3200, suffix: '+', label: 'Patients Treated'    },
@@ -37,40 +36,62 @@ function Counter({ target, suffix }) {
 }
 
 export default function HeroAurora() {
-  const heroRef  = useRef(null)
-  const videoRef = useRef(null)
+  const heroRef     = useRef(null)
+  const videoRef    = useRef(null)
+  const textRef     = useRef(null)
+  const recoveryRef = useRef(null)
+  const alignRef    = useRef(null)
 
-  /* ── Entrance animation ─────────────────────────────────────────────── */
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.timeline({ delay: 0.3 })
-        .from('.h-eyebrow',  { y: 16, opacity: 0, duration: 0.55, ease: 'power3.out' })
-        .from('.h-headline', { y: 50, opacity: 0, duration: 0.85, ease: 'power3.out' }, '-=0.25')
-        .from('.h-sub',      { y: 30, opacity: 0, duration: 0.65, ease: 'power3.out' }, '-=0.45')
-        .from('.h-ctas',     { y: 20, opacity: 0, duration: 0.50, ease: 'power3.out' }, '-=0.35')
-        .from('.h-stats',    { y: 18, opacity: 0, duration: 0.50, ease: 'power3.out' }, '-=0.30')
-        .from('.h-badge',    {
-          scale: 0.82, opacity: 0, duration: 0.65,
-          ease: 'back.out(1.5)', stagger: 0.18,
-        }, '-=0.55')
-    }, heroRef)
-    return () => ctx.revert()
-  }, [])
-
-  /* ── Native scroll scrub — no GSAP ScrollTrigger, no Lenis dependency ── */
+  /* ── Video scrub — native scroll, no GSAP, no Lenis dependency ─────── */
   useEffect(() => {
     const video   = videoRef.current
-    const section = document.getElementById('hero')
+    const section = heroRef.current
     if (!video || !section) return
 
-    const handleScroll = () => {
+    const onScroll = () => {
       const { top, height } = section.getBoundingClientRect()
-      const progress = Math.min(Math.max(-top / (height - window.innerHeight), 0), 1)
-      video.currentTime = progress * video.duration
+      const scrolled   = -top
+      const scrollable = height - window.innerHeight
+      const progress   = Math.min(Math.max(scrolled / scrollable, 0), 1)
+      if (video.duration) {
+        video.currentTime = progress * video.duration
+      }
     }
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  /* ── Text fade + badge drift — native scroll ────────────────────────── */
+  useEffect(() => {
+    const text     = textRef.current
+    const recovery = recoveryRef.current
+    const align    = alignRef.current
+    const section  = heroRef.current
+    if (!text || !section) return
+
+    const onScroll = () => {
+      const { top, height } = section.getBoundingClientRect()
+      const scrolled   = -top
+      const scrollable = height - window.innerHeight
+      const progress   = Math.min(Math.max(scrolled / scrollable, 0), 1)
+
+      // Text fades out over first 60% of scroll
+      const textProgress = Math.min(progress / 0.6, 1)
+      text.style.opacity   = 1 - textProgress
+      text.style.transform = `translateY(${-72 * textProgress}px)`
+
+      // Badges drift
+      if (recovery) {
+        recovery.style.transform = `translate(${-32 * progress}px, ${-26 * progress}px) rotate(${-8 * progress}deg)`
+      }
+      if (align) {
+        align.style.transform = `translate(${30 * progress}px, ${34 * progress}px) rotate(${7 * progress}deg)`
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   return (
@@ -103,7 +124,10 @@ export default function HeroAurora() {
         <div className="relative z-10 w-full h-full grid grid-cols-1 lg:grid-cols-2">
 
           {/* Left — typography, CTAs, stats */}
-          <div className="flex flex-col justify-center px-8 md:px-14 lg:px-16 pt-24 pb-12 lg:pb-20">
+          <div
+            ref={textRef}
+            className="flex flex-col justify-center px-8 md:px-14 lg:px-16 pt-24 pb-12 lg:pb-20"
+          >
             <div className="h-eyebrow eyebrow mb-6 self-start">
               Mesa, AZ · Pain Management Specialists
             </div>
@@ -166,10 +190,12 @@ export default function HeroAurora() {
           {/* Right — clear focal window + floating glassmorphic badges */}
           <div className="relative hidden lg:block">
 
-            <div className="h-badge absolute top-[27%] left-[10%] z-20
-              backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
-              shadow-[0_8px_40px_rgba(0,212,170,0.20),0_2px_12px_rgba(0,0,0,0.40)]
-              rounded-2xl px-5 py-4 min-w-[152px]"
+            <div
+              ref={recoveryRef}
+              className="h-badge absolute top-[27%] left-[10%] z-20
+                backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
+                shadow-[0_8px_40px_rgba(0,212,170,0.20),0_2px_12px_rgba(0,0,0,0.40)]
+                rounded-2xl px-5 py-4 min-w-[152px]"
             >
               <p className="font-mono text-[9px] text-white/55 uppercase tracking-[0.15em] mb-1.5">
                 Recovery
@@ -183,10 +209,12 @@ export default function HeroAurora() {
               </div>
             </div>
 
-            <div className="h-badge absolute bottom-[30%] right-[8%] z-20
-              backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
-              shadow-[0_8px_40px_rgba(129,140,248,0.20),0_2px_12px_rgba(0,0,0,0.40)]
-              rounded-2xl px-5 py-4 min-w-[158px]"
+            <div
+              ref={alignRef}
+              className="h-badge absolute bottom-[30%] right-[8%] z-20
+                backdrop-blur-[16px] bg-white/[0.08] border border-white/[0.18]
+                shadow-[0_8px_40px_rgba(129,140,248,0.20),0_2px_12px_rgba(0,0,0,0.40)]
+                rounded-2xl px-5 py-4 min-w-[158px]"
             >
               <p className="font-mono text-[9px] text-white/55 uppercase tracking-[0.15em] mb-1.5">
                 Alignment
