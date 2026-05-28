@@ -42,56 +42,58 @@ export default function HeroAurora() {
   const recoveryRef = useRef(null)
   const alignRef    = useRef(null)
 
-  /* ── Video scrub — native scroll, no GSAP, no Lenis dependency ─────── */
+  /* ── Scroll animation — rAF loop reads position every frame ───────────
+   *  Using requestAnimationFrame instead of window 'scroll' events because
+   *  Lenis smooth-scrolls via window.scrollTo() and event timing can be
+   *  inconsistent.  rAF always reads the real painted position, so video
+   *  scrub, text fade, and badge drift stay perfectly in sync.
+   * ─────────────────────────────────────────────────────────────────────── */
   useEffect(() => {
-    const video   = videoRef.current
-    const section = heroRef.current
-    if (!video || !section) return
-
-    const onScroll = () => {
-      const { top, height } = section.getBoundingClientRect()
-      const scrolled   = -top
-      const scrollable = height - window.innerHeight
-      const progress   = Math.min(Math.max(scrolled / scrollable, 0), 1)
-      if (video.duration) {
-        video.currentTime = progress * video.duration
-      }
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  /* ── Text fade + badge drift — native scroll ────────────────────────── */
-  useEffect(() => {
+    const video    = videoRef.current
+    const section  = heroRef.current
     const text     = textRef.current
     const recovery = recoveryRef.current
     const align    = alignRef.current
-    const section  = heroRef.current
-    if (!text || !section) return
+    if (!video || !section) return
 
-    const onScroll = () => {
+    let rafId
+
+    const update = () => {
       const { top, height } = section.getBoundingClientRect()
       const scrolled   = -top
       const scrollable = height - window.innerHeight
-      const progress   = Math.min(Math.max(scrolled / scrollable, 0), 1)
 
-      // Text fades out over first 60% of scroll
-      const textProgress = Math.min(progress / 0.6, 1)
-      text.style.opacity   = 1 - textProgress
-      text.style.transform = `translateY(${-72 * textProgress}px)`
+      if (scrollable > 0) {
+        const progress = Math.min(Math.max(scrolled / scrollable, 0), 1)
 
-      // Badges drift
-      if (recovery) {
-        recovery.style.transform = `translate(${-32 * progress}px, ${-26 * progress}px) rotate(${-8 * progress}deg)`
+        // Video scrub
+        if (video.readyState >= 1) {
+          video.currentTime = progress * video.duration
+        }
+
+        // Text fades out over first 60 % of scroll travel
+        if (text) {
+          const t = Math.min(progress / 0.6, 1)
+          text.style.opacity   = 1 - t
+          text.style.transform = `translateY(${-72 * t}px)`
+        }
+
+        // Badges drift
+        if (recovery) {
+          recovery.style.transform =
+            `translate(${-32 * progress}px, ${-26 * progress}px) rotate(${-8 * progress}deg)`
+        }
+        if (align) {
+          align.style.transform =
+            `translate(${30 * progress}px, ${34 * progress}px) rotate(${7 * progress}deg)`
+        }
       }
-      if (align) {
-        align.style.transform = `translate(${30 * progress}px, ${34 * progress}px) rotate(${7 * progress}deg)`
-      }
+
+      rafId = requestAnimationFrame(update)
     }
 
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    rafId = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(rafId)
   }, [])
 
   return (
